@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: liman-tv
+    runtime: node
+    plan: free
+    region: frankfurt
+    buildCommand: npm ci --omit=dev --no-audit --no-fund
+    startCommand: npm start
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_VERSION
+        value: 22.22.0
+      - key: NODE_ENV
+        value: production
+      - key: HOST
+        value: 0.0.0.0
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: XTREAM_URL
+        sync: false
+      - key: XTREAM_USERNAME
+        sync: false
+      - key: XTREAM_PASSWORD
+        sync: false
+      - key: APP_PASSWORD
+        sync: false

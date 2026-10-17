@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Liman TV — Canlı Yayınlar</title>
+  <meta name="description" content="Xtream hesabındaki canlı kanalları kategorilere göre listeleyen ve tarayıcıda oynatan sakin, kişisel web oynatıcı.">
+  <meta name="theme-color" content="#0f0f1c">
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/vendor/mpegts.min.js" defer></script>
+  <script src="/vendor/hls.min.js" defer></script>
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <!-- İkon seti -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M16 16l4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+    <symbol id="i-prev" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-next" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-star" viewBox="0 0 24 24"><path d="M12 3.8l2.5 5.1 5.6.8-4 3.9.9 5.6-5-2.6-5 2.6.9-5.6-4-3.9 5.6-.8z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></symbol>
+    <symbol id="i-star-fill" viewBox="0 0 24 24"><path d="M12 3.8l2.5 5.1 5.6.8-4 3.9.9 5.6-5-2.6-5 2.6.9-5.6-4-3.9 5.6-.8z" fill="currentColor" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></symbol>
+    <symbol id="i-pip" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.6"/><rect x="12" y="11" width="7" height="6" rx="1.2" fill="currentColor"/></symbol>
+    <symbol id="i-expand" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-grid" viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/><rect x="13" y="4" width="7" height="7" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/><rect x="4" y="13" width="7" height="7" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/><rect x="13" y="13" width="7" height="7" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M12 8v4.5l3 1.8" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+    <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3.5 7.5a2 2 0 012-2h4l2 2h7a2 2 0 012 2v7a2 2 0 01-2 2h-13a2 2 0 01-2-2z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M19 12a7 7 0 11-2.05-4.95M19 5v4h-4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-logout" viewBox="0 0 24 24"><path d="M14 4h4a2 2 0 012 2v12a2 2 0 01-2 2h-4M10 16l-4-4 4-4M6 12h10" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/></symbol>
+    <symbol id="i-logo" viewBox="0 0 32 32"><defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#c8b6ff"/><stop offset="1" stop-color="#ffc8b0"/></linearGradient></defs><rect x="3" y="6" width="26" height="18" rx="6" fill="none" stroke="url(#lg)" stroke-width="2.2"/><path d="M8 19c2.5-2.4 5-2.4 8 0s5.5 2.4 8 0" fill="none" stroke="url(#lg)" stroke-width="2.2" stroke-linecap="round"/><path d="M12 28h8" stroke="url(#lg)" stroke-width="2.2" stroke-linecap="round"/></symbol>
+  </svg>
+
+  <div class="aurora" aria-hidden="true"><span></span><span></span><span></span></div>
+
+  <!-- Giriş -->
+  <main id="login-view" class="login" hidden>
+    <form id="login-form" class="login-card glass" novalidate>
+      <svg class="login-logo" aria-hidden="true"><use href="#i-logo"/></svg>
+      <h1>Liman TV</h1>
+      <p class="muted">Nefes al. Ekran seni bekliyor.</p>
+      <label class="field">
+        <span>Şifre</span>
+        <input id="login-password" name="password" type="password" autocomplete="current-password" required>
+      </label>
+      <p id="login-error" class="form-error" role="alert"></p>
+      <button id="login-submit" class="btn btn-primary" type="submit">İçeri gir</button>
+    </form>
+  </main>
+
+  <!-- Uygulama -->
+  <div id="app" class="app" hidden>
+    <aside id="sidebar" class="sidebar glass" aria-label="Kategoriler">
+      <header class="brand">
+        <svg class="brand-logo" aria-hidden="true"><use href="#i-logo"/></svg>
+        <span class="brand-name">Liman TV</span>
+        <button id="sidebar-close" class="icon-btn compact-only" type="button" aria-label="Kategorileri kapat">
+          <svg><use href="#i-close"/></svg>
+        </button>
+      </header>
+
+      <label class="search">
+        <svg aria-hidden="true"><use href="#i-search"/></svg>
+        <input id="category-search" type="search" placeholder="Kategori ara" autocomplete="off" aria-label="Kategori ara">
+      </label>
+
+      <nav class="cat-scroll">
+        <ul id="special-list" class="cat-list"></ul>
+        <p class="cat-heading">Kategoriler</p>
+        <ul id="category-list" class="cat-list">
+          <li class="skeleton-row"></li><li class="skeleton-row"></li><li class="skeleton-row"></li>
+          <li class="skeleton-row"></li><li class="skeleton-row"></li>
+        </ul>
+      </nav>
+
+      <footer id="account-box" class="account"></footer>
+    </aside>
+    <div id="scrim" class="scrim"></div>
+
+    <section class="channels glass" aria-labelledby="channel-heading">
+      <header class="channels-head">
+        <button id="sidebar-open" class="icon-btn compact-only" type="button" aria-label="Kategorileri aç">
+          <svg><use href="#i-menu"/></svg>
+        </button>
+        <div class="channels-title">
+          <h2 id="channel-heading">Tüm Kanallar</h2>
+          <p id="channel-count" class="muted small">Yükleniyor…</p>
+        </div>
+      </header>
+      <label class="search">
+        <svg aria-hidden="true"><use href="#i-search"/></svg>
+        <input id="channel-search" type="search" placeholder="Bu listede kanal ara" autocomplete="off" aria-label="Kanal ara">
+      </label>
+      <div class="channel-scroll">
+        <ul id="channel-list" class="channel-list"></ul>
+        <div id="channel-sentinel" class="sentinel" aria-hidden="true"></div>
+        <p id="channel-empty" class="empty" hidden></p>
+      </div>
+    </section>
+
+    <main class="stage">
+      <h1 class="visually-hidden">Liman TV — Canlı yayınlar</h1>
+
+      <div id="player-shell" class="player glass">
+        <video id="video" playsinline controls preload="none"></video>
+
+        <div id="player-idle" class="overlay overlay-idle">
+          <svg class="idle-logo" aria-hidden="true"><use href="#i-logo"/></svg>
+          <p class="idle-title">Bir kanal seç.</p>
+          <p class="muted">Acele yok; ekran burada, seni bekliyor.</p>
+          <button id="resume-btn" class="btn btn-ghost" type="button" hidden>
+            <svg aria-hidden="true"><use href="#i-play"/></svg><span id="resume-label"></span>
+          </button>
+        </div>
+
+        <div id="player-loading" class="overlay overlay-loading" hidden>
+          <div class="ripple" aria-hidden="true"><span></span><span></span></div>
+          <p id="loading-text">Yayın hazırlanıyor…</p>
+        </div>
+
+        <div id="player-error" class="overlay overlay-error" hidden role="alert">
+          <p class="error-title">Yayın şu an açılamadı</p>
+          <p id="player-error-text" class="muted"></p>
+          <div class="error-actions">
+            <button id="retry-btn" class="btn btn-primary" type="button">Tekrar dene</button>
+            <button id="alt-format-btn" class="btn btn-ghost" type="button">Diğer biçimle dene</button>
+          </div>
+        </div>
+      </div>
+
+      <section class="now glass" aria-live="polite">
+        <div class="now-head">
+          <div id="now-logo" class="now-logo" aria-hidden="true"></div>
+          <div class="now-meta">
+            <p class="eyebrow"><span id="live-dot" class="live-dot"></span><span id="now-category">Canlı yayın</span></p>
+            <h2 id="now-title">Henüz bir kanal seçmedin</h2>
+          </div>
+        </div>
+        <div class="now-actions">
+          <button id="prev-btn" class="icon-btn" type="button" aria-label="Önceki kanal" title="Önceki kanal (↑)"><svg><use href="#i-prev"/></svg></button>
+          <button id="next-btn" class="icon-btn" type="button" aria-label="Sonraki kanal" title="Sonraki kanal (↓)"><svg><use href="#i-next"/></svg></button>
+          <button id="fav-btn" class="icon-btn" type="button" aria-pressed="false" aria-label="Favorilere ekle" title="Favori"><svg><use href="#i-star"/></svg></button>
+          <button id="pip-btn" class="icon-btn" type="button" aria-label="Resim içinde resim" title="Resim içinde resim"><svg><use href="#i-pip"/></svg></button>
+          <button id="fs-btn" class="icon-btn" type="button" aria-label="Tam ekran" title="Tam ekran (F)"><svg><use href="#i-expand"/></svg></button>
+          <label class="select">
+            <span class="visually-hidden">Akış biçimi</span>
+            <select id="format-select">
+              <option value="auto">Otomatik</option>
+              <option value="ts">MPEG-TS</option>
+              <option value="hls">HLS</option>
+            </select>
+          </label>
+        </div>
+        <div id="epg" class="epg">
+          <p class="muted small">Yayın akışı, bir kanal seçtiğinde burada belirecek.</p>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+</body>
+</html>

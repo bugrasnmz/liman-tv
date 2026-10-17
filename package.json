@@ -1,0 +1,19 @@
+{
+  "name": "xtream-web-player",
+  "version": "1.0.0",
+  "description": "Xtream Codes hesabını kategorili bir web oynatıcıya dönüştüren hafif sunucu",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=20.12"
+  },
+  "dependencies": {
+    "hls.js": "1.7.3",
+    "mpegts.js": "1.8.2"
+  }
+}
