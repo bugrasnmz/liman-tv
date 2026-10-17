@@ -35,6 +35,10 @@ test('authentication, catalogue and encrypted HLS proxy work together', async (t
       res.setHeader('Content-Type', 'application/json');
       return res.end(JSON.stringify(data));
     }
+    if (/\/43\.(ts|m3u8)$/.test(url.pathname)) {
+      res.setHeader('Content-Type', 'text/html; charset=UTF-8');
+      return res.end('<html><body>XUI.ONE FORCED_COUNTRY_INVALID Country does not match forced country.</body></html>');
+    }
     if (url.pathname.endsWith('.m3u8')) {
       res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
       return res.end(`#EXTM3U\n#EXT-X-TARGETDURATION:6\n#EXT-X-KEY:METHOD=AES-128,URI="/key/${providerPassword}"\n#EXTINF:6,\n/segments/${providerPassword}.ts\n`);
@@ -80,6 +84,11 @@ test('authentication, catalogue and encrypted HLS proxy work together', async (t
   assert.equal(found.items[0].id, 42);
   const account = await (await fetch(`${base}/api/account`, { headers })).text();
   assert.ok(!account.includes(providerPassword));
+  for (const ext of ['ts', 'm3u8']) {
+    const blocked = await fetch(`${base}/live/43.${ext}`, { headers });
+    assert.equal(blocked.status, 403);
+    assert.equal((await blocked.json()).code, 'COUNTRY_RESTRICTED');
+  }
   const playlist = await (await fetch(`${base}/live/42.m3u8`, { headers })).text();
   assert.ok(playlist.startsWith('#EXTM3U'));
   assert.ok(!playlist.includes(providerPassword));

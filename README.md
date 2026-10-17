@@ -67,3 +67,7 @@ Tarayıcı ──► Liman TV sunucusu ──► Xtream sağlayıcı
 - 15 dakika istek almayan servis uyur; sonraki açılış yaklaşık bir dakika sürebilir.
 - Video trafiği sunucudan geçtiği için ücretsiz kota sınırlıdır. Ödeme yöntemi varsa kota aşımı ücret doğurabilir; ücretsiz kullanım için faturalandırma ayarlarını kontrol et.
 - Ücretsiz plan sınırları: https://render.com/docs/free
+
+## Kanal listesi geliyor ama yayınlar açılmıyor
+
+Sağlayıcı `FORCED_COUNTRY_INVALID` yanıtı veriyorsa hesap belirli bir ülkeye kilitlidir. Render Frankfurt sunucusunun Almanya çıkışı kullanması nedeniyle liste erişilebilirken video istekleri reddedilebilir. MPEG-TS/HLS değiştirmek bunu çözmez. Sağlayıcıdan sunucunun ülkesi için izin istemek veya sunucuyu hesabın izin verdiği ülkede barındırmak gerekir. Uygulama bu HTML hata sayfasını artık video olarak iletmez; erişim reddi döndürür.

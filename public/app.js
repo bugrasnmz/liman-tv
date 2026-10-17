@@ -538,8 +538,9 @@
     if (info.message && !info.code && !info.detail) return info.message;
     switch (info.code) {
       case 401:
+        return 'Oturum gerekli veya sağlayıcı hesabı geçersiz. Yeniden giriş yapıp hesap durumunu kontrol et.';
       case 403:
-        return 'Sağlayıcı yayını reddetti. Aynı anda izin verilen bağlantı sayısı dolmuş ya da hesabın süresi bitmiş olabilir.';
+        return 'Sağlayıcı bu bağlantıya izin vermiyor. Hesabın ülke kısıtlamasını ve eşzamanlı bağlantı sınırını kontrol et. Sunucunun bulunduğu ülkeye sağlayıcının izin vermesi gerekir.';
       case 404:
         return 'Bu kanal sağlayıcıda şu an yayında görünmüyor.';
       case 502:

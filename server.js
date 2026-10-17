@@ -439,6 +439,30 @@ function upstreamFailure(res, status) {
   return sendJson(res, 502, { error: `Sağlayıcı ${status} yanıtı döndürdü.` });
 }
 
+/** Video yerine dönen sağlayıcı hata sayfalarını medya olarak iletme. */
+async function rejectHtmlStream(res, up) {
+  if (!(up.headers.get('content-type') || '').toLowerCase().includes('text/html')) return false;
+  const reader = up.body?.getReader();
+  let sample = '';
+  try {
+    const first = reader ? await reader.read() : null;
+    sample = first?.value ? Buffer.from(first.value).toString('utf8') : '';
+  } finally {
+    await reader?.cancel().catch(() => {});
+  }
+  if (sample.includes('FORCED_COUNTRY_INVALID')) {
+    console.warn('[upstream] COUNTRY_RESTRICTED: sağlayıcı sunucunun ülkesine izin vermiyor');
+    sendJson(res, 403, {
+      code: 'COUNTRY_RESTRICTED',
+      error: 'Yayın sağlayıcısı sunucunun bulunduğu ülkeye izin vermiyor. Hesabın izin verilen ülkesi sağlayıcı tarafından güncellenmeli.',
+    });
+  } else {
+    console.warn('[upstream] video yerine HTML hata sayfası alındı');
+    sendJson(res, 502, { error: 'Sağlayıcı video yerine bir hata sayfası döndürdü.' });
+  }
+  return true;
+}
+
 /** Sağlayıcıdan gelen akışı istemciye aktarır; istemci ayrılınca sağlayıcı bağlantısını da keser. */
 async function pipeUpstream(res, url, { contentType, cacheControl = 'no-store' } = {}) {
   const ctrl = new AbortController();
@@ -455,6 +479,8 @@ async function pipeUpstream(res, url, { contentType, cacheControl = 'no-store' }
     up.body?.cancel().catch(() => {});
     return upstreamFailure(res, up.status);
   }
+
+  if (await rejectHtmlStream(res, up)) return;
 
   const headers = {
     'Content-Type': contentType || up.headers.get('content-type') || 'application/octet-stream',
@@ -505,6 +531,7 @@ async function servePlaylist(res, url) {
     return sendJson(res, 502, { error: 'Yayın listesine ulaşılamadı.' });
   }
   if (!up.ok) return upstreamFailure(res, up.status);
+  if (await rejectHtmlStream(res, up)) return;
   const text = await up.text();
   if (!text.trimStart().startsWith('#EXTM3U')) {
     console.warn('[upstream] invalid-playlist', JSON.stringify({status: up.status, type: up.headers.get('content-type'), length: text.length, html: /<(?:html|!doctype)/i.test(text)}));
@@ -631,35 +658,6 @@ const server = http.createServer(async (req, res) => {
     if (req.method !== 'GET' && req.method !== 'HEAD') return sendJson(res, 405, { error: 'Desteklenmeyen istek' });
 
     if (pathname === '/api/account') return await handleAccount(res);
-    const diagnostic = pathname.match(/^\/api\/diagnostics\/(\d+)$/);
-    if (diagnostic) {
-      const results = [];
-      for (const ext of ['m3u8', 'ts']) {
-        const ctrl = new AbortController();
-        const timer = setTimeout(() => ctrl.abort(), 15000);
-        const started = Date.now();
-        try {
-          const target = `${XT.base}/live/${encodeURIComponent(XT.user)}/${encodeURIComponent(XT.pass)}/${diagnostic[1]}.${ext}`;
-          const up = await upstream(target, { signal: ctrl.signal, timeout: 12000 });
-          const reader = up.body?.getReader();
-          const first = reader ? await reader.read() : null;
-          const sample = new TextDecoder().decode(first?.value);
-          const isHtml = /<(?:html|!doctype)/i.test(sample);
-          const redact = value => [XT.user, XT.pass, APP_PASSWORD].filter(Boolean).reduce((s, secret) => s.split(secret).join('[redacted]'), value).replace(/https?:\/\/[^\s<>"']+/g, '[url]');
-          const htmlMessage = isHtml ? redact(sample.replace(/<script[\s\S]*?<\/script>/gi, '').replace(/<style[\s\S]*?<\/style>/gi, '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()).slice(0, 700) : null;
-          results.push({ format: ext, status: up.status, type: up.headers.get('content-type'), message: htmlMessage,
-            bytes: first?.value?.length || 0, playlist: sample.trimStart().startsWith('#EXTM3U'),
-            html: /<(?:html|!doctype)/i.test(sample), elapsed: Date.now() - started });
-          await reader?.cancel();
-        } catch (err) {
-          results.push({format: ext, error: err.name, code: err.cause?.code || null, elapsed: Date.now() - started});
-        } finally {
-          clearTimeout(timer);
-          ctrl.abort();
-        }
-      }
-      return sendJson(res, 200, { results });
-    }
     if (pathname === '/api/live/categories') return await handleCategories(res);
     if (pathname === '/api/live/streams') return await handleStreams(res, searchParams);
 
