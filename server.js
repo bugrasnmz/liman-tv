@@ -507,6 +507,7 @@ async function servePlaylist(res, url) {
   if (!up.ok) return upstreamFailure(res, up.status);
   const text = await up.text();
   if (!text.trimStart().startsWith('#EXTM3U')) {
+    console.warn('[upstream] invalid-playlist', JSON.stringify({status: up.status, type: up.headers.get('content-type'), length: text.length, html: /<(?:html|!doctype)/i.test(text)}));
     return sendJson(res, 502, { error: 'Sağlayıcı geçerli bir HLS listesi döndürmedi.' });
   }
   res.writeHead(200, {
@@ -630,6 +631,32 @@ const server = http.createServer(async (req, res) => {
     if (req.method !== 'GET' && req.method !== 'HEAD') return sendJson(res, 405, { error: 'Desteklenmeyen istek' });
 
     if (pathname === '/api/account') return await handleAccount(res);
+    const diagnostic = pathname.match(/^\/api\/diagnostics\/(\d+)$/);
+    if (diagnostic) {
+      const results = [];
+      for (const ext of ['m3u8', 'ts']) {
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), 15000);
+        const started = Date.now();
+        try {
+          const target = `${XT.base}/live/${encodeURIComponent(XT.user)}/${encodeURIComponent(XT.pass)}/${diagnostic[1]}.${ext}`;
+          const up = await upstream(target, { signal: ctrl.signal, timeout: 12000 });
+          const reader = up.body?.getReader();
+          const first = reader ? await reader.read() : null;
+          const sample = new TextDecoder().decode(first?.value);
+          results.push({ format: ext, status: up.status, type: up.headers.get('content-type'),
+            bytes: first?.value?.length || 0, playlist: sample.trimStart().startsWith('#EXTM3U'),
+            html: /<(?:html|!doctype)/i.test(sample), elapsed: Date.now() - started });
+          await reader?.cancel();
+        } catch (err) {
+          results.push({format: ext, error: err.name, code: err.cause?.code || null, elapsed: Date.now() - started});
+        } finally {
+          clearTimeout(timer);
+          ctrl.abort();
+        }
+      }
+      return sendJson(res, 200, { results });
+    }
     if (pathname === '/api/live/categories') return await handleCategories(res);
     if (pathname === '/api/live/streams') return await handleStreams(res, searchParams);
 
