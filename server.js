@@ -248,6 +248,14 @@ async function upstream(url, { signal, timeout = 20_000 } = {}) {
       signal: ctrl.signal,
       headers: { 'User-Agent': USER_AGENT, Accept: '*/*' },
     });
+  } catch (err) {
+    // URL ve sağlayıcı kimlik bilgilerini loglama.
+    console.warn('[upstream]', JSON.stringify({
+      error: err.name, code: err.cause?.code || err.code || null,
+      causes: err.cause?.errors?.map(e => e.code),
+      aborted: ctrl.signal.aborted,
+    }));
+    throw err;
   } finally {
     clearTimeout(timer);
   }
@@ -421,6 +429,7 @@ async function handleEpg(res, id) {
 /* ────────────────────────────── Yayın proxy ────────────────────────────── */
 
 function upstreamFailure(res, status) {
+  console.warn('[upstream] HTTP', status);
   if (status === 401 || status === 403) {
     return sendJson(res, 403, {
       error: 'Sağlayıcı yayını reddetti. Bağlantı sınırı dolmuş ya da hesap süresi bitmiş olabilir.',
