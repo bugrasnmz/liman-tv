@@ -2,7 +2,8 @@
  * Liman TV — Xtream Codes hesabı için hafif web oynatıcı sunucusu.
  *
  * Görevleri:
- *  - Xtream kimlik bilgilerini sunucuda tutar; tarayıcıya asla göndermez.
+ *  - Varsayılan proxy modunda Xtream kimlik bilgilerini sunucuda tutar.
+ *    İsteğe bağlı direct modu bilgileri yalnızca giriş yapan tarayıcıya iletir.
  *  - player_api.php çağrılarını önbellekleyip sadeleştirilmiş JSON olarak sunar.
  *  - Canlı yayınları (MPEG-TS ve HLS) aynı origin üzerinden proxy'ler;
  *    böylece CORS ve HTTPS/HTTP "mixed content" sorunları ortadan kalkar.
@@ -54,6 +55,11 @@ const HOST = process.env.HOST || '0.0.0.0';
 const APP_PASSWORD = process.env.APP_PASSWORD || '';
 if (process.env.NODE_ENV === 'production' && APP_PASSWORD.length < 12) {
   console.error('Üretimde APP_PASSWORD en az 12 karakter olmalı.');
+  process.exit(1);
+}
+const DIRECT_PLAYBACK = process.env.STREAM_MODE === 'direct';
+if (DIRECT_PLAYBACK && (APP_PASSWORD.length < 12 || (process.env.NODE_ENV === 'production' && !XT.base.startsWith('https:')))) {
+  console.error('Doğrudan oynatma için güçlü APP_PASSWORD ve üretimde HTTPS sağlayıcı adresi gerekli.');
   process.exit(1);
 }
 const CACHE_TTL = (Number(process.env.CACHE_TTL_MINUTES) || 10) * 60_000;
@@ -605,11 +611,11 @@ async function serveStatic(req, res, pathname) {
 const CSP = [
   "default-src 'self'",
   "img-src 'self' data:",
-  "media-src 'self' blob:",
+  `media-src 'self' blob:${DIRECT_PLAYBACK ? " https:" : ""}`,
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   'font-src https://fonts.gstatic.com',
   "script-src 'self'",
-  "connect-src 'self'",
+  `connect-src 'self'${DIRECT_PLAYBACK ? " https:" : ""}`,
   "worker-src 'self' blob:",
   "frame-ancestors 'self'",
 ].join('; ');
@@ -658,6 +664,18 @@ const server = http.createServer(async (req, res) => {
     if (req.method !== 'GET' && req.method !== 'HEAD') return sendJson(res, 405, { error: 'Desteklenmeyen istek' });
 
     if (pathname === '/api/account') return await handleAccount(res);
+    const playback = pathname.match(/^\/api\/playback\/(\d+)$/);
+    if (playback) {
+      const catalog = await getLiveCatalog();
+      if (!catalog.byId.has(Number(playback[1]))) return sendJson(res, 404, {error: 'Kanal bulunamadı'});
+      const base = DIRECT_PLAYBACK
+        ? `${XT.base}/live/${encodeURIComponent(XT.user)}/${encodeURIComponent(XT.pass)}`
+        : '/live';
+      return sendJson(res, 200, {
+        mode: DIRECT_PLAYBACK ? 'direct' : 'proxy',
+        ts: `${base}/${playback[1]}.ts`, hls: `${base}/${playback[1]}.m3u8`,
+      });
+    }
     if (pathname === '/api/live/categories') return await handleCategories(res);
     if (pathname === '/api/live/streams') return await handleStreams(res, searchParams);
 

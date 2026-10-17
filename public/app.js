@@ -437,7 +437,7 @@
       : escapeHtml(initials(ch.name));
   }
 
-  function playChannel(ch, { mode } = {}) {
+  async function playChannel(ch, { mode } = {}) {
     teardownPlayer();
     const token = ++player.token;
     player.fallbackTried = Boolean(mode);
@@ -454,7 +454,15 @@
     loadEpg(ch);
     updateMediaSession(ch);
 
-    startPlayback(ch, token, mode || resolveMode());
+    showOverlay('loading', 'Yayın bağlantısı hazırlanıyor…');
+    try {
+      const sources = await api(`/api/playback/${ch.id}`);
+      if (token !== player.token) return;
+      player.sources = sources;
+      startPlayback(ch, token, mode || resolveMode());
+    } catch (err) {
+      if (token === player.token) showOverlay('error', err.message);
+    }
   }
 
   function startPlayback(ch, token, mode) {
@@ -475,7 +483,7 @@
 
   function startTs(ch, token) {
     const mp = window.mpegts.createPlayer(
-      { type: 'mpegts', isLive: true, url: `/live/${ch.id}.ts` },
+      { type: 'mpegts', isLive: true, url: player.sources.ts },
       {
         enableWorker: true,
         lazyLoad: false,
@@ -494,7 +502,7 @@
   }
 
   function startHls(ch, token) {
-    const src = `/live/${ch.id}.m3u8`;
+    const src = player.sources.hls;
     const Hls = window.Hls;
     if (Hls && Hls.isSupported()) {
       let recovered = false;

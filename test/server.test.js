@@ -70,7 +70,7 @@ test('authentication, catalogue and encrypted HLS proxy work together', async (t
   for (const file of ['/vendor/hls.min.js', '/vendor/mpegts.min.js', '/app.js', '/styles.css'])
     assert.equal((await fetch(base + file)).status, 200, file);
   assert.equal((await fetch(`${base}/.env`)).status, 404);
-  for (const route of ['/api/live/categories', '/api/account', '/live/42.m3u8', '/hls/seg?token=x'])
+  for (const route of ['/api/live/categories', '/api/account', '/api/playback/42', '/live/42.m3u8', '/hls/seg?token=x'])
     assert.equal((await fetch(base + route)).status, 401, route);
   assert.equal((await fetch(`${base}/api/login`, { method: 'POST', body: JSON.stringify({ password: 'wrong' }) })).status, 401);
   const login = await fetch(`${base}/api/login`, { method: 'POST', headers: { 'X-Forwarded-Proto': 'https' }, body: JSON.stringify({ password }) });
@@ -82,6 +82,9 @@ test('authentication, catalogue and encrypted HLS proxy work together', async (t
   assert.equal(catalogue.total, 1);
   const found = await (await fetch(`${base}/api/live/streams?q=gundem`, { headers })).json();
   assert.equal(found.items[0].id, 42);
+  const sources = await (await fetch(`${base}/api/playback/42`, { headers })).json();
+  assert.deepEqual(sources, { mode: 'proxy', ts: '/live/42.ts', hls: '/live/42.m3u8' });
+  assert.equal((await fetch(`${base}/api/playback/999`, { headers })).status, 404);
   const account = await (await fetch(`${base}/api/account`, { headers })).text();
   assert.ok(!account.includes(providerPassword));
   for (const ext of ['ts', 'm3u8']) {
@@ -104,4 +107,45 @@ test('authentication, catalogue and encrypted HLS proxy work together', async (t
   tampered.searchParams.set('token', bytes.toString('base64url'));
   assert.equal((await fetch(tampered, { headers })).status, 403);
   assert.equal((await fetch(`${base}/hls/seg?u=b2xk&s=invalid`, { headers })).status, 403);
+});
+
+test('direct playback is explicit and authenticated; proxy remains the default', async (t) => {
+  const provider = http.createServer((req, res) => {
+    const action = new URL(req.url, 'http://localhost').searchParams.get('action');
+    res.setHeader('Content-Type', 'application/json');
+    res.end(JSON.stringify(action === 'get_live_categories'
+      ? [{ category_id: '1', category_name: 'Test' }]
+      : [{ stream_id: 42, category_id: '1', name: 'Test' }]));
+  });
+  provider.listen(0, '127.0.0.1');
+  await once(provider, 'listening');
+  const probe = http.createServer();
+  probe.listen(0, '127.0.0.1');
+  await once(probe, 'listening');
+  const port = probe.address().port;
+  await new Promise(resolve => probe.close(resolve));
+  const providerBase = `http://127.0.0.1:${provider.address().port}`;
+  const base = `http://127.0.0.1:${port}`;
+  const child = spawn(process.execPath, ['server.js'], {
+    env: { ...process.env, NODE_ENV: 'test', PORT: String(port), HOST: '127.0.0.1',
+      XTREAM_URL: providerBase, XTREAM_USERNAME: 'test user', XTREAM_PASSWORD: 'test/pass',
+      APP_PASSWORD: password, STREAM_MODE: 'direct' }, stdio: 'pipe',
+  });
+  t.after(async () => {
+    child.kill();
+    await once(child, 'exit');
+    provider.closeAllConnections();
+    await new Promise(resolve => provider.close(resolve));
+  });
+  await waitReady(base, child);
+  assert.equal((await fetch(`${base}/api/playback/42`)).status, 401);
+  const login = await fetch(`${base}/api/login`, { method: 'POST', body: JSON.stringify({ password }) });
+  const headers = { Cookie: login.headers.get('set-cookie').split(';')[0] };
+  const response = await fetch(`${base}/api/playback/42`, { headers });
+  assert.match(response.headers.get('cache-control'), /no-store/);
+  const sources = await response.json();
+  assert.deepEqual(sources, { mode: 'direct', ts: `${providerBase}/live/test%20user/test%2Fpass/42.ts`, hls: `${providerBase}/live/test%20user/test%2Fpass/42.m3u8` });
+  const csp = (await fetch(base)).headers.get('content-security-policy');
+  assert.match(csp, /connect-src 'self' https:/);
+  assert.match(csp, /media-src 'self' blob: https:/);
 });

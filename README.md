@@ -33,7 +33,7 @@ Tarayıcı ──► Liman TV sunucusu ──► Xtream sağlayıcı
              yayın proxy'si)        /live/...)
 ```
 
-- Xtream kullanıcı adın ve şifren sadece sunucuda kalır, tarayıcıya hiç gitmez.
+- Varsayılan proxy modunda Xtream kullanıcı adın ve şifren sunucuda kalır. İsteğe bağlı direct modunun gizlilik farkı aşağıda açıklanır.
 - Yayınlar ve logolar aynı adres üzerinden aktarılır. Böylece CORS ve HTTPS/HTTP karışıklığı yaşanmaz.
 - Proxy linkleri AES-256-GCM ile şifrelenir; sağlayıcı adresi ve kimlik bilgileri gizlenir. Tokenler rota bazında doğrulanır ve sunucu başkalarına açık bir proxy olarak kullanılamaz.
 - Kanal değiştirdiğinde ya da sekmeyi kapattığında sağlayıcıyla olan bağlantı hemen kapanır. Tek bağlantılı hesaplarda bu önemli.
@@ -71,3 +71,7 @@ Tarayıcı ──► Liman TV sunucusu ──► Xtream sağlayıcı
 ## Kanal listesi geliyor ama yayınlar açılmıyor
 
 Sağlayıcı `FORCED_COUNTRY_INVALID` yanıtı veriyorsa hesap belirli bir ülkeye kilitlidir. Render Frankfurt sunucusunun Almanya çıkışı kullanması nedeniyle liste erişilebilirken video istekleri reddedilebilir. MPEG-TS/HLS değiştirmek bunu çözmez. Sağlayıcıdan sunucunun ülkesi için izin istemek veya sunucuyu hesabın izin verdiği ülkede barındırmak gerekir. Uygulama bu HTML hata sayfasını artık video olarak iletmez; erişim reddi döndürür.
+
+### İsteğe bağlı doğrudan oynatma
+
+`STREAM_MODE=direct`, HTTPS/CORS destekleyen sağlayıcının videosunu ziyaretçinin cihazından alır. Ülke kontrolü ziyaretçinin internet bağlantısına uygulanır ve video Render kotasını tüketmez. **Bu modda siteye giriş yapanlar Xtream kullanıcı adı ve şifresini tarayıcı ağ kayıtlarında görebilir.** Varsayılan `proxy` modunda bu bilgiler sunucuda kalır. Direct modu en az 12 karakterli giriş şifresi, üretimde HTTPS sağlayıcı adresi ve bu gizlilik farkının kabul edilmesini gerektirir.
