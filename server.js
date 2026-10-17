@@ -644,7 +644,10 @@ const server = http.createServer(async (req, res) => {
           const reader = up.body?.getReader();
           const first = reader ? await reader.read() : null;
           const sample = new TextDecoder().decode(first?.value);
-          results.push({ format: ext, status: up.status, type: up.headers.get('content-type'),
+          const isHtml = /<(?:html|!doctype)/i.test(sample);
+          const redact = value => [XT.user, XT.pass, APP_PASSWORD].filter(Boolean).reduce((s, secret) => s.split(secret).join('[redacted]'), value).replace(/https?:\/\/[^\s<>"']+/g, '[url]');
+          const htmlMessage = isHtml ? redact(sample.replace(/<script[\s\S]*?<\/script>/gi, '').replace(/<style[\s\S]*?<\/style>/gi, '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()).slice(0, 700) : null;
+          results.push({ format: ext, status: up.status, type: up.headers.get('content-type'), message: htmlMessage,
             bytes: first?.value?.length || 0, playlist: sample.trimStart().startsWith('#EXTM3U'),
             html: /<(?:html|!doctype)/i.test(sample), elapsed: Date.now() - started });
           await reader?.cancel();
